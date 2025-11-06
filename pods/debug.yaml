@@ -1,0 +1,13 @@
+# Just sleep for 3600 seconds
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-2
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: logunov-worker
+  containers:
+  - name: debug-2
+    image: busybox:latest
+    command: ["sleep", "3600"]

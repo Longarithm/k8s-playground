@@ -1,0 +1,13 @@
+# HTTP echo pod that serves a static message
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: echo
+spec:
+  containers:
+  - name: echo
+    image: hashicorp/http-echo
+    args: ["-text=mock inference done"]
+    ports:
+    - containerPort: 5678

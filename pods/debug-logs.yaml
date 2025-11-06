@@ -1,0 +1,31 @@
+# Sleep for 120 seconds and write logs to a file every second
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-logs
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: logunov-worker
+  containers:
+  - name: debug-logs
+    image: busybox:latest
+    command:
+      - sh
+      - -c
+      - |
+        echo "Starting log writer..."
+        for i in $(seq 1 120); do
+          date | tee -a /mnt/logs/debug.log
+          sleep 1
+        done
+        echo "Done"
+    volumeMounts:
+      - name: host-logs
+        mountPath: /mnt/logs
+  volumes:
+    - name: host-logs
+      hostPath:
+        path: /var/log/debug-test
+        type: DirectoryOrCreate
+  restartPolicy: Never
