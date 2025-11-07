@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ssh-auth
+type: Opaque
+stringData:
+  PUBLIC_KEY: "REPLACE_WITH_YOUR_SSH_PUBLIC_KEY"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ssh
+  labels:
+    app: ssh
+spec:
+  initContainers:
+  - name: fix-shared-perms
+    image: busybox:1.36
+    command:
+    - sh
+    - -lc
+    - >
+      mkdir -p /shared &&
+      chown -R 1000:1000 /shared &&
+      chmod -R u+rwX,g+rwX /shared
+    volumeMounts:
+    - name: shared
+      mountPath: /shared
+  containers:
+  - name: ssh
+    image: lscr.io/linuxserver/openssh-server:latest
+    env:
+    - name: PUID
+      value: "1000"
+    - name: PGID
+      value: "1000"
+    - name: TZ
+      value: "UTC"
+    - name: USER_NAME
+      value: "ubuntu"
+    - name: PUBLIC_KEY
+      valueFrom:
+        secretKeyRef:
+          name: ssh-auth
+          key: PUBLIC_KEY
+    ports:
+    - containerPort: 2222
+    volumeMounts:
+    - name: shared
+      mountPath: /shared
+  volumes:
+  - name: shared
+    hostPath:
+      path: /var/lib/ssh-demo
+      type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ssh-svc
+spec:
+  selector:
+    app: ssh
+  type: NodePort
+  ports:
+  - name: ssh
+    protocol: TCP
+    port: 2222
+    targetPort: 2222
+    nodePort: 30022
+
+
