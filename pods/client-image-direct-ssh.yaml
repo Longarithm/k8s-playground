@@ -1,0 +1,77 @@
+# Maintain SSH through the client's container image
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client-app-direct-ssh
+  labels:
+    app: client-app-direct-ssh
+spec:
+  initContainers:
+  - name: init-ssh-keys
+    image: busybox:1.36
+    command:
+    - sh
+    - -lc
+    - >
+      mkdir -p /home/ubuntu/.ssh &&
+      cp /key-src/authorized_keys /home/ubuntu/.ssh/authorized_keys &&
+      chown -R 1000:1000 /home/ubuntu/.ssh &&
+      chmod 700 /home/ubuntu/.ssh &&
+      chmod 600 /home/ubuntu/.ssh/authorized_keys
+    volumeMounts:
+    - name: ssh-key
+      mountPath: /key-src
+      readOnly: true
+    - name: home-ubuntu
+      mountPath: /home/ubuntu
+  containers:
+  - name: app
+    # REPLACE with the client's container image that includes openssh-server
+    image: CONTAINER_IMAGE_URL
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: APP_CMD
+      value: "/bin/sleep infinity"
+    ports:
+    - containerPort: 2222
+    volumeMounts:
+    - name: home-ubuntu
+      mountPath: /home/ubuntu
+    command:
+    - sh
+    - -lc
+    - >
+      /usr/sbin/sshd -D
+      -o "Port 2222"
+      -o "PermitRootLogin no"
+      -o "PasswordAuthentication no"
+      -o "PubkeyAuthentication yes"
+      -o "AuthorizedKeysFile=/home/ubuntu/.ssh/authorized_keys"
+      & exec ${APP_CMD}
+  volumes:
+  - name: ssh-key
+    secret:
+      secretName: ssh-authorized-keys
+      items:
+      - key: authorized_keys
+        path: authorized_keys
+  - name: home-ubuntu
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-app-direct-ssh-svc
+spec:
+  selector:
+    app: client-app-direct-ssh
+  type: NodePort
+  ports:
+  - name: ssh
+    protocol: TCP
+    port: 2222
+    targetPort: 2222
+    nodePort: 30022
+
+
