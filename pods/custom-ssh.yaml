@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: custom-ssh
+  labels:
+    app: custom-ssh
+spec:
+  initContainers:
+  - name: fix-perms
+    image: busybox:1.36
+    command:
+    - sh
+    - -lc
+    - chown -R 1000:1000 /data && chmod 775 /data
+    volumeMounts:
+    - name: host-observable
+      mountPath: /data
+  containers:
+  - name: app
+    # Replace this with the image you push (see instructions below)
+    image: your-registry/your-namespace/custom-ssh:latest
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: SSH_PORT
+      value: "2222"
+    ports:
+    - containerPort: 2222
+    volumeMounts:
+    - name: host-observable
+      mountPath: /data
+    - name: ssh-keys
+      mountPath: /home/ubuntu/.ssh/authorized_keys
+      subPath: authorized_keys
+  volumes:
+  - name: host-observable
+    hostPath:
+      path: /var/lib/k8s/custom-ssh
+      type: DirectoryOrCreate
+  - name: ssh-keys
+    secret:
+      secretName: ssh-authorized-keys
+      defaultMode: 0400
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: custom-ssh-svc
+spec:
+  selector:
+    app: custom-ssh
+  type: NodePort
+  ports:
+  - name: ssh
+    protocol: TCP
+    port: 2222
+    targetPort: 2222
+    nodePort: 30022
+
+
