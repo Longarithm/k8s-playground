@@ -18,7 +18,7 @@ spec:
   containers:
   - name: app
     # Replace this with the image you push (see instructions below)
-    image: your-registry/your-namespace/custom-ssh:latest
+    image: docker.io/looogarithm/custom-ssh:latest
     imagePullPolicy: IfNotPresent
     env:
     - name: SSH_PORT
