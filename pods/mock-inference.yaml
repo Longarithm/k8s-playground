@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mock-inference
+  labels:
+    app: mock-inference
+spec:
+  containers:
+  - name: app
+    image: docker.io/looogarithm/mock-inference:latest
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: MODEL_PORT
+      value: "8080"
+    - name: SSH_PORT
+      value: "2222"
+    ports:
+    - containerPort: 8080
+    - containerPort: 2222
+    volumeMounts:
+    - name: ssh-keys
+      mountPath: /home/ubuntu/.ssh/authorized_keys
+      subPath: authorized_keys
+  volumes:
+  - name: ssh-keys
+    secret:
+      secretName: ssh-authorized-keys
+      defaultMode: 0644
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-inference-svc
+spec:
+  selector:
+    app: mock-inference
+  type: NodePort
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+    nodePort: 30081
+  - name: ssh
+    protocol: TCP
+    port: 2222
+    targetPort: 2222
+    nodePort: 30023
+
+
