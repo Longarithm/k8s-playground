@@ -1,6 +1,6 @@
 # mprime (Prime95) wrapper image
 
-This image wraps `nelsonjchen/mprime` to be compatible with the server operator:
+This image wraps Prime95/mprime to be compatible with the server operator:
 
 - Starts an SSH server on `$SSH_PORT` (default: 2222) with key-only auth using `/home/ubuntu/.ssh/authorized_keys`.
 - Exposes a simple HTTP health endpoint on `$MODEL_PORT` (default: 8080) that returns `200 OK`.
@@ -12,7 +12,9 @@ The operator will mount an `authorized_keys` file at `/home/ubuntu/.ssh/authoriz
 
 ```bash
 cd /Users/Aleksandr1/code/k8s-playground/images/mprime
-docker build -t your-registry/mprime-wrapper:latest .
+# Pick a current linux64 tarball URL from mersenne.org/download/
+MPRIME_URL="https://www.mersenne.org/ftp_root/gimps/p95v308b17.linux64.tar.gz"
+docker build --build-arg MPRIME_URL="$MPRIME_URL" -t your-registry/mprime-wrapper:latest .
 ```
 
 ## Push
@@ -46,11 +48,15 @@ curl http://<node-ip>:30080/
 
 # SSH access
 ssh -p 30022 ubuntu@<node-ip>
+
+# Status (tails of results.txt and prime.log)
+curl http://<node-ip>:30080/status
 ```
 
 ## Notes
 
 - Container lifecycle is tied to `mprime` (if it exits, the container exits).
 - SSH and HTTP servers are stopped when `mprime` ends or the pod receives SIGTERM.
+- You must provide `--build-arg MPRIME_URL=<linux64 tar.gz>` from `mersenne.org` when building.
 
 
