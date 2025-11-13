@@ -7,10 +7,10 @@ SSH_PORT="${SSH_PORT:-2222}"
 # Ensure SSH directory exists with sane permissions (do not modify mounted file)
 mkdir -p /home/ubuntu/.ssh
 chmod 700 /home/ubuntu/.ssh || true
-chown -R ubuntu:ubuntu /home/ubuntu/.ssh || true
+chown ubuntu:ubuntu /home/ubuntu/.ssh || true
 
 # Generate host keys if missing
-ssh-keygen -A
+ssh-keygen -A >/dev/null 2>&1 || true
 
 # Start a minimal HTTP/status server
 python3 /usr/local/bin/status_server.py &
@@ -20,8 +20,8 @@ p_http=$!
 /usr/sbin/sshd -D -p "${SSH_PORT}" &
 p_sshd=$!
 
-# Start mprime in torture test mode (continuous CPU load)
-/opt/mprime/mprime -t &
+# Start mprime in torture test mode (continuous CPU load) and tee logs
+/opt/mprime/mprime -t > >(tee -a /opt/mprime/prime.log) 2>&1 &
 p_mprime=$!
 
 trap 'kill -TERM "$p_http" "$p_sshd" "$p_mprime" 2>/dev/null || true' TERM INT

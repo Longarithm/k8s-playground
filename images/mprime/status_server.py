@@ -32,11 +32,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(b"ok")
             return
         if self.path == "/status":
-            results_tail = tail_file(base_dir / "results.txt")
             log_tail = tail_file(base_dir / "prime.log")
             body = json.dumps(
                 {
-                    "results_tail": results_tail[-8192:],  # final bytes after decode
                     "log_tail": log_tail[-8192:],
                 }
             ).encode("utf-8")
