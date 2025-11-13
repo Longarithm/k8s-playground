@@ -57,11 +57,12 @@ def make_manifest_yaml(
     app_label: str,
     svc_name: str,
     image: str,
-    ssh_port: int,
     secret_name: str,
-    http_node_port: Optional[int],
-    ssh_node_port: Optional[int],
+    http_node_port: int,
+    ssh_node_port: int,
 ) -> str:
+    model_port_internal = 8080
+    ssh_port_internal = 2222
     pod_obj = {
         "apiVersion": "v1",
         "kind": "Pod",
@@ -76,12 +77,12 @@ def make_manifest_yaml(
                     "image": image,
                     "imagePullPolicy": "IfNotPresent",
                     "env": [
-                        {"name": "MODEL_PORT", "value": "8080"},
-                        {"name": "SSH_PORT", "value": str(ssh_port)},
+                        {"name": "MODEL_PORT", "value": str(model_port_internal)},
+                        {"name": "SSH_PORT", "value": str(ssh_port_internal)},
                     ],
                     "ports": [
-                        {"containerPort": 8080},
-                        {"containerPort": ssh_port},
+                        {"containerPort": model_port_internal},
+                        {"containerPort": ssh_port_internal},
                     ],
                     "volumeMounts": [
                         {
@@ -114,23 +115,21 @@ def make_manifest_yaml(
                 {
                     "name": "http",
                     "protocol": "TCP",
-                    "port": 8080,
-                    "targetPort": 8080,
+                    "port": model_port_internal,
+                    "targetPort": model_port_internal,
                 },
                 {
                     "name": "ssh",
                     "protocol": "TCP",
-                    "port": ssh_port,
-                    "targetPort": ssh_port,
+                    "port": ssh_port_internal,
+                    "targetPort": ssh_port_internal,
                 },
             ],
         },
     }
     # Pin nodePorts (required, we default them upstream)
-    if http_node_port is not None:
-        svc_obj["spec"]["ports"][0]["nodePort"] = http_node_port
-    if ssh_node_port is not None:
-        svc_obj["spec"]["ports"][1]["nodePort"] = ssh_node_port
+    svc_obj["spec"]["ports"][0]["nodePort"] = http_node_port
+    svc_obj["spec"]["ports"][1]["nodePort"] = ssh_node_port
     pieces = [
         yaml.safe_dump(pod_obj, sort_keys=False).rstrip(),
         yaml.safe_dump(svc_obj, sort_keys=False).rstrip(),
@@ -201,9 +200,7 @@ def provision(req: ProvisionRequest) -> ProvisionResponse:
     ssh_key = req.ssh_public_key.strip()
     if not ssh_key:
         raise HTTPException(status_code=400, detail="ssh_public_key is required")
-    # Container SSH port is fixed to 22
-    ssh_port = 22
-
+    
     http_node_port = 30080
     ssh_node_port = 30022
     
@@ -225,7 +222,6 @@ def provision(req: ProvisionRequest) -> ProvisionResponse:
         app_label=app_label,
         svc_name=svc_name,
         image=image,
-        ssh_port=ssh_port,
         secret_name=secret_name,
         http_node_port=http_node_port,
         ssh_node_port=ssh_node_port,
