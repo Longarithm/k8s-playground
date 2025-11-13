@@ -4,12 +4,10 @@ set -euo pipefail
 MODEL_PORT="${MODEL_PORT:-8080}"
 SSH_PORT="${SSH_PORT:-2222}"
 
-# Ensure SSH directory and permisssions for ubuntu user
+# Ensure SSH directory exists with sane permissions (do not modify mounted file)
 mkdir -p /home/ubuntu/.ssh
-touch /home/ubuntu/.ssh/authorized_keys || true
-chown -R ubuntu:ubuntu /home/ubuntu/.ssh || true
 chmod 700 /home/ubuntu/.ssh || true
-chmod 600 /home/ubuntu/.ssh/authorized_keys || true
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh || true
 
 # Generate host keys if missing
 ssh-keygen -A

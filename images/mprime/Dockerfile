@@ -14,7 +14,7 @@ RUN useradd -ms /bin/bash ubuntu && \
 
 # Minimal SSHD configuration snippet suitable for key-only auth
 RUN mkdir -p /etc/ssh/sshd_config.d && \
-    printf "Port 2222\nPasswordAuthentication no\nPermitRootLogin no\nPubkeyAuthentication yes\nAuthorizedKeysFile /home/ubuntu/.ssh/authorized_keys\nSubsystem sftp /usr/lib/openssh/sftp-server\n" > /etc/ssh/sshd_config.d/99-operator.conf
+    printf "PasswordAuthentication no\nPermitRootLogin no\nPubkeyAuthentication yes\nAuthorizedKeysFile /home/ubuntu/.ssh/authorized_keys\n" > /etc/ssh/sshd_config.d/99-operator.conf
 
 COPY status_server.py /usr/local/bin/status_server.py
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

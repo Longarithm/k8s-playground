@@ -75,7 +75,7 @@ def make_manifest_yaml(
                 {
                     "name": "app",
                     "image": image,
-                    "imagePullPolicy": "IfNotPresent",
+                    "imagePullPolicy": "Always",
                     "env": [
                         {"name": "MODEL_PORT", "value": str(model_port_internal)},
                         {"name": "SSH_PORT", "value": str(ssh_port_internal)},
