@@ -31,9 +31,6 @@ Environment variables:
 - `HOST` (default `0.0.0.0`) – bind address
 - `PORT` (default `8088`) – listen port
 - `NAMESPACE` (default `default`) – namespace to create resources in
-- `SERVICE_TYPE` (default `NodePort`) – `NodePort` or `LoadBalancer`
-- `HTTP_NODEPORT` (optional; default 30081) – pin http nodePort (typical valid range 30000–32767)
-- `SSH_NODEPORT` (optional; default 30022) – pin ssh nodePort (typical valid range 30000–32767)
 
 ### Provisioning API
 
@@ -43,16 +40,14 @@ Body:
 ```json
 {
   "container_img_url": "docker.io/looogarithm/mock-inference:latest",
-  "ssh_public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI.... user@example",
-  "port": 22
+  "ssh_public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI.... user@example"
 }
 ```
 
 Notes:
 - HTTP container port is always 8080.
-- SSH container port defaults to 22 unless specified in `port`.
-- Default Service type is `NodePort`. Connect using a node’s external IP and the nodePorts (defaults: http 30081, ssh 30022). Override with `HTTP_NODEPORT` and `SSH_NODEPORT` if needed.
-- If you need exact external ports (8080/22) without nodePorts, set `SERVICE_TYPE=LoadBalancer` (requires a working cloud LB).
+- SSH container port is fixed to 22.
+- Service type is always `NodePort`. Connect using a node’s external IP and the nodePorts (defaults: http 30080, ssh 30022).
 
 Example:
 ```bash
@@ -71,21 +66,21 @@ Example response:
   "pod_name": "client-mock-inference-67c5f2f8-pod",
   "service_name": "client-mock-inference-67c5f2f8-svc",
   "secret_name": "ssh-authorized-keys",
-  "http_port": 8080,
-  "ssh_port": 22,
-  "external_ip": null,
-  "service_type": "NodePort",
-  "http_node_port": 30081,
-  "ssh_node_port": 30022,
+  "connect_http_port": 30080,
+  "connect_ssh_port": 30022,
   "namespace": "default"
 }
 ```
 
 ### Behavior
-- Service type defaults to `NodePort` to avoid LoadBalancer provisioning delays. Use `SERVICE_TYPE=LoadBalancer` if you want 8080/22 on a cloud LB.
 - Secret upsert uses `kubectl create secret ... --dry-run=client -o yaml | kubectl apply -f -`
 - Pod mounts the secret at `/home/ubuntu/.ssh/authorized_keys` via `subPath`
 - Pod sets env `MODEL_PORT=8080` and `SSH_PORT=<port>`
 - Existing resources with the same generated names are deleted before applying
+
+### Connecting
+- Use a worker node’s external IP
+  - HTTP: `http://<node-external-ip>:<connect_http_port>` (default 30080)
+  - SSH: `ssh -p <connect_ssh_port> ubuntu@<node-external-ip>` (default 30022)
 
 
