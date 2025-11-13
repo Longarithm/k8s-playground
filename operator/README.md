@@ -4,7 +4,7 @@ A lightweight HTTP service that provisions a Pod + Service on your Kubernetes cl
 
 - Creates/updates the `ssh-authorized-keys` secret with the provided public key
 - Generates and applies a Pod manifest using the provided container image
-- Exposes HTTP (8080) and SSH (default 22, configurable) via a NodePort Service
+- Exposes HTTP and SSH via a NodePort Service
 - Cleans up any existing Pod/Service with the same generated names
 
 ### Prerequisites
@@ -78,5 +78,5 @@ Example response:
 
 ### Connecting
 - Use a worker node’s external IP
-  - HTTP: `http://<node-external-ip>:<connect_http_port>` (default 30080)
-  - SSH: `ssh -p <connect_ssh_port> ubuntu@<node-external-ip>` (default 30022)
+  - HTTP: `http://<node-external-ip>:<connect_http_port>`
+  - SSH: `ssh -p <connect_ssh_port> ubuntu@<node-external-ip>`
