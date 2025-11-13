@@ -45,9 +45,8 @@ Body:
 ```
 
 Notes:
-- HTTP container port is always 8080.
-- SSH container port is fixed to 22.
-- Service type is always `NodePort`. Connect using a node’s external IP and the nodePorts (defaults: http 30080, ssh 30022).
+- HTTP container port is always 30080.
+- SSH container port is always 30022.
 
 Example:
 ```bash
@@ -55,8 +54,7 @@ curl -sS -X POST http://127.0.0.1:8088/provision \
   -H 'Content-Type: application/json' \
   -d '{
     "container_img_url": "docker.io/looogarithm/mock-inference:latest",
-    "ssh_public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@example",
-    "port": 22
+    "ssh_public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@example"
   }' | jq .
 ```
 
@@ -82,5 +80,3 @@ Example response:
 - Use a worker node’s external IP
   - HTTP: `http://<node-external-ip>:<connect_http_port>` (default 30080)
   - SSH: `ssh -p <connect_ssh_port> ubuntu@<node-external-ip>` (default 30022)
-
-

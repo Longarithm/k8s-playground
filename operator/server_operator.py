@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import base64
 import json
 import os
 import re
 import subprocess
-import sys
 import time
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -206,16 +204,9 @@ def provision(req: ProvisionRequest) -> ProvisionResponse:
     # Container SSH port is fixed to 22
     ssh_port = 22
 
-    # Determine nodePorts from request or defaults when NodePort
-    http_node_port = None
-    ssh_node_port = None
     http_node_port = 30080
     ssh_node_port = 30022
-    # Basic sanity range (typical default); cluster may differ
-    for name, n in (("http_node_port", http_node_port), ("ssh_node_port", ssh_node_port)):
-        if n is not None and not (30000 <= n <= 32767):
-            raise HTTPException(status_code=400, detail=f"{name} must be within 30000..32767")
-
+    
     base = sanitize_name(image.split("/")[-1], prefix="client")
     app_label = base
     pod_name = f"{base}-pod"
