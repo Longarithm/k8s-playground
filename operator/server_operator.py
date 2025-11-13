@@ -27,6 +27,8 @@ class ProvisionResponse(BaseModel):
     ssh_port: int
     external_ip: Optional[str]
     service_type: str
+    http_node_port: Optional[int] = None
+    ssh_node_port: Optional[int] = None
     namespace: str
 
 
@@ -64,6 +66,8 @@ def make_manifest_yaml(
     ssh_port: int,
     secret_name: str,
     service_type: str,
+    http_node_port: Optional[int],
+    ssh_node_port: Optional[int],
 ) -> str:
     pod_obj = {
         "apiVersion": "v1",
@@ -129,6 +133,12 @@ def make_manifest_yaml(
             ],
         },
     }
+    if service_type == "NodePort":
+        # Optionally pin nodePorts if provided
+        if http_node_port is not None:
+            svc_obj["spec"]["ports"][0]["nodePort"] = http_node_port
+        if ssh_node_port is not None:
+            svc_obj["spec"]["ports"][1]["nodePort"] = ssh_node_port
     pieces = [
         yaml.safe_dump(pod_obj, sort_keys=False).rstrip(),
         yaml.safe_dump(svc_obj, sort_keys=False).rstrip(),
@@ -210,9 +220,9 @@ def get_service_external_ip(name: str, namespace: str) -> Optional[str]:
 @app.post("/provision", response_model=ProvisionResponse)
 def provision(req: ProvisionRequest) -> ProvisionResponse:
     namespace = os.getenv("NAMESPACE", "default")
-    service_type = os.getenv("SERVICE_TYPE", "LoadBalancer")
+    service_type = os.getenv("SERVICE_TYPE", "NodePort")
     if service_type not in ("LoadBalancer", "NodePort"):
-        service_type = "LoadBalancer"
+        service_type = "NodePort"
     image = req.container_img_url.strip()
     if not image:
         raise HTTPException(status_code=400, detail="container_img_url is required")
@@ -222,6 +232,31 @@ def provision(req: ProvisionRequest) -> ProvisionResponse:
     ssh_port = int(req.port) if req.port is not None else 22
     if ssh_port <= 0 or ssh_port > 65535:
         raise HTTPException(status_code=400, detail="port must be 1..65535")
+
+    # Optional nodePort pinning via env
+    def parse_int_env(name: str) -> Optional[int]:
+        val = os.getenv(name)
+        if not val:
+            return None
+        try:
+            n = int(val, 10)
+            return n
+        except Exception:
+            return None
+
+    http_node_port = parse_int_env("HTTP_NODEPORT") if service_type == "NodePort" else None
+    ssh_node_port = parse_int_env("SSH_NODEPORT") if service_type == "NodePort" else None
+    # Apply defaults for NodePort pinning if not provided
+    if service_type == "NodePort":
+        if http_node_port is None:
+            http_node_port = 30081
+        if ssh_node_port is None:
+            ssh_node_port = 30022
+    # Basic sanity range (typical default); cluster may differ
+    if service_type == "NodePort":
+        for name, n in (("HTTP_NODEPORT", http_node_port), ("SSH_NODEPORT", ssh_node_port)):
+            if n is not None and not (30000 <= n <= 32767):
+                raise HTTPException(status_code=400, detail=f"{name} must be within 30000..32767")
 
     base = sanitize_name(image.split("/")[-1], prefix="client")
     app_label = base
@@ -244,11 +279,22 @@ def provision(req: ProvisionRequest) -> ProvisionResponse:
         ssh_port=ssh_port,
         secret_name=secret_name,
         service_type=service_type,
+        http_node_port=http_node_port,
+        ssh_node_port=ssh_node_port,
     )
     apply_manifest(manifest, namespace)
 
-    # External IP for LoadBalancer, else None
-    external_ip = get_service_external_ip(svc_name, namespace) if service_type == "LoadBalancer" else None
+    external_ip = None
+    http_np = None
+    ssh_np = None
+    if service_type == "LoadBalancer":
+        # External IP for LoadBalancer, else None
+        external_ip = get_service_external_ip(svc_name, namespace)
+    else:
+        # Fetch assigned NodePorts
+        ports = get_service_node_ports(svc_name, namespace)
+        http_np = ports.get("http")
+        ssh_np = ports.get("ssh")
 
     return ProvisionResponse(
         pod_name=pod_name,
@@ -258,6 +304,8 @@ def provision(req: ProvisionRequest) -> ProvisionResponse:
         ssh_port=ssh_port,
         external_ip=external_ip,
         service_type=service_type,
+        http_node_port=http_np,
+        ssh_node_port=ssh_np,
         namespace=namespace,
     )
 
