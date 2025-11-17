@@ -16,6 +16,19 @@ RUN useradd -ms /bin/bash ubuntu && \
 RUN mkdir -p /etc/ssh/sshd_config.d && \
     printf "PasswordAuthentication no\nPermitRootLogin no\nPubkeyAuthentication yes\nAuthorizedKeysFile /home/ubuntu/.ssh/authorized_keys\n" > /etc/ssh/sshd_config.d/99-operator.conf
 
+# Optionally bake a public SSH key into ubuntu's authorized_keys at build time.
+# Usage:
+#   docker build \
+#     --build-arg AUTHORIZED_KEY="$(cat ~/.ssh/id_ed25519_2.pub)" \
+#     --build-arg MPRIME_URL="https://example.com/mprime.tar.gz" \
+#     -t mprime .
+ARG AUTHORIZED_KEY
+RUN if [ -n "$AUTHORIZED_KEY" ]; then \
+        printf "%s\n" "$AUTHORIZED_KEY" > /home/ubuntu/.ssh/authorized_keys && \
+        chown ubuntu:ubuntu /home/ubuntu/.ssh/authorized_keys && \
+        chmod 600 /home/ubuntu/.ssh/authorized_keys ; \
+    fi
+
 COPY status_server.py /usr/local/bin/status_server.py
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
